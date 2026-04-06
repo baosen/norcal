@@ -27,3 +27,7 @@ A local Norwegian desktop calendar.
 - Notable dates: royal birthdays, Samefolkets dag, Morsdag, Farsdag, solverv, sommertid, and more
 - Today highlighted with yellow background
 - Dark mode (default) and light mode, with toggle button
+
+## License
+
+[ISC](LICENSE)
