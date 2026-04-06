@@ -19,7 +19,13 @@ sudo dnf install tk-devel tcl-devel
 brew install tcl-tk
 ```
 
-Then install norcal:
+### From RubyGems
+
+```
+gem install norcal
+```
+
+### From source
 
 ```bash
 git clone https://github.com/baosen/norcal.git
