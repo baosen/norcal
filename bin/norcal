@@ -68,7 +68,7 @@ def red_days(year)
     e + 1                   => "2. påskedag",
     Date.new(year, 5, 1)   => "Arbeidernes dag",
     e + 39                  => "Kristi himmelfartsdag",
-    Date.new(year, 5, 17)  => "Grunnlovsdag",
+    Date.new(year, 5, 17)  => "Grunnlovsdagen",
     e + 49                  => "1. pinsedag",
     e + 50                  => "2. pinsedag",
     Date.new(year, 12, 25) => "1. juledag",
@@ -77,66 +77,75 @@ def red_days(year)
 end
 
 # Notable dates: [date, description, show_date_in_red?]
+# Red days are auto-included from red_days(); some get extra context in the
+# notable_names override below.
 def notable_dates(year)
   e = easter(year)
+  holidays = red_days(year)
+
   morsdag       = nth_wday(year, 2, 7, 2)
   farsdag       = nth_wday(year, 11, 7, 2)
   sommer_start  = last_wday(year, 3, 7)
   sommer_slutt  = last_wday(year, 10, 7)
   fastelavn     = e - 49
+  botsdag       = last_wday(year, 10, 7)
   nov27         = Date.new(year, 11, 27)
   advent1       = nov27 + ((7 - nov27.cwday) % 7)
 
-  botsdag = last_wday(year, 10, 7)  # last Sunday in October
+  # Override display names for some red days in the notable list
+  notable_names = {
+    e + 39                 => "Kristi himmelfartsdag",
+    Date.new(year, 5, 17) => "Grunnlovsdagen 1814",
+  }
 
-  [
-    [Date.new(year, 1, 1),   "Første nyttårsdag",                                    true],
-    [Date.new(year, 1, 21),  "Prinsesse Ingrid Alexandra, #{year - 2004} år", false],
-    [Date.new(year, 2, 6),   "Samefolkets dag",                               false],
-    [morsdag,                 "Morsdag",                                        false],
-    [Date.new(year, 2, 14),  "Valentinsdag",                                   false],
-    [fastelavn,               "Fastelavn",                                      false],
-    [Date.new(year, 2, 21),  "Kong Harald, #{year - 1937} år",                 false],
-    [Date.new(year, 3, 8),   "Kvinnedagen",                                    false],
-    [Date.new(year, 3, 20),  "Vårjevndøgn",                                    false],
-    [sommer_start,            "Sommertid start",                                false],
-    [e - 7,                   "Palmesøndag",                                    true],
-    [e - 3,                   "Skjærtorsdag",                                   true],
-    [e - 2,                   "Langfredag",                                     true],
-    [e - 1,                   "Påskeaften",                                     false],
-    [e,                       "1. påskedag",                                    true],
-    [e + 1,                   "2. påskedag",                                    true],
-    [Date.new(year, 5, 1),   "Arbeidernes dag",                                true],
-    [Date.new(year, 5, 8),   "Frigjøringsdag 1945",                            false],
-    [e + 39,                  "Kristi himmelfartsdag",                             true],
-    [Date.new(year, 5, 17),  "Grunnlovsdag 1814",                              true],
-    [e + 48,                  "Pinseaften",                                     false],
-    [e + 49,                  "1. pinsedag",                                    true],
-    [e + 50,                  "2. pinsedag",                                    true],
-    [Date.new(year, 6, 7),   "Unionsoppløsning 1905",                          false],
-    [Date.new(year, 6, 21),  "Sommersolverv",                                   false],
-    [Date.new(year, 6, 23),  "Sankthansaften",                                 false],
-    [Date.new(year, 7, 4),   "Dronning Sonja, #{year - 1937} år",             false],
-    [Date.new(year, 7, 20),  "Kronprins Haakon, #{year - 1973} år",           false],
-    [Date.new(year, 7, 29),  "Olsokdagen",                                    false],
-    [Date.new(year, 8, 19),  "Kronprinsesse Mette-Marit, #{year - 1973} år",  false],
-    [Date.new(year, 9, 23),  "Høstjevndøgn",                                   false],
-    [botsdag,                 "Bots- og bededag",                               false],
-    [sommer_slutt,            "Sommertid slutt",                                false],
-    [Date.new(year, 10, 31), "Halloween",                                      false],
-    [Date.new(year, 11, 1),  "Allehelgensdag",                                false],
-    [farsdag,                 "Farsdag",                                        false],
-    [advent1,                 "1. søndag i advent",                             false],
-    [advent1 + 7,             "2. søndag i advent",                             false],
-    [Date.new(year, 12, 13), "Luciadagen",                                    false],
-    [advent1 + 14,            "3. søndag i advent",                             false],
-    [advent1 + 21,            "4. søndag i advent",                             false],
-    [Date.new(year, 12, 21), "Vintersolverv",                                  false],
-    [Date.new(year, 12, 24), "Julaften",                                       false],
-    [Date.new(year, 12, 25), "1. juledag",                                     true],
-    [Date.new(year, 12, 26), "2. juledag",                                     true],
-    [Date.new(year, 12, 31), "Nyttårsaften",                                   false],
-  ].sort_by { |d, _, _| d }
+  # Start with all red days
+  entries = holidays.map { |date, name|
+    [date, notable_names[date] || name, true]
+  }
+
+  # Red-in-list but not a public holiday
+  entries += [
+    [e - 7, "Palmesøndag", true],
+  ]
+
+  # Non-red notable dates
+  entries += [
+    [Date.new(year, 1, 21),  "Prinsesse Ingrid Alexandra, #{year - 2004} år"],
+    [Date.new(year, 2, 6),   "Samefolkets dag"],
+    [morsdag,                 "Morsdag"],
+    [Date.new(year, 2, 14),  "Valentinsdag"],
+    [fastelavn,               "Fastelavn"],
+    [Date.new(year, 2, 21),  "Kong Harald, #{year - 1937} år"],
+    [Date.new(year, 3, 8),   "Kvinnedagen"],
+    [Date.new(year, 3, 20),  "Vårjevndøgn"],
+    [sommer_start,            "Sommertid start"],
+    [e - 1,                   "Påskeaften"],
+    [Date.new(year, 5, 8),   "Frigjøringsdagen 1945"],
+    [e + 48,                  "Pinseaften"],
+    [Date.new(year, 6, 7),   "Unionsoppløsning 1905"],
+    [Date.new(year, 6, 21),  "Sommersolverv"],
+    [Date.new(year, 6, 23),  "Sankthansaften"],
+    [Date.new(year, 7, 4),   "Dronning Sonja, #{year - 1937} år"],
+    [Date.new(year, 7, 20),  "Kronprins Haakon, #{year - 1973} år"],
+    [Date.new(year, 7, 29),  "Olsokdagen"],
+    [Date.new(year, 8, 19),  "Kronprinsesse Mette-Marit, #{year - 1973} år"],
+    [Date.new(year, 9, 23),  "Høstjevndøgn"],
+    [botsdag,                 "Bots- og bededag"],
+    [sommer_slutt,            "Sommertid slutt"],
+    [Date.new(year, 10, 31), "Halloween"],
+    [Date.new(year, 11, 1),  "Allehelgensdag"],
+    [farsdag,                 "Farsdag"],
+    [advent1,                 "1. søndag i advent"],
+    [advent1 + 7,             "2. søndag i advent"],
+    [Date.new(year, 12, 13), "Luciadagen"],
+    [advent1 + 14,            "3. søndag i advent"],
+    [advent1 + 21,            "4. søndag i advent"],
+    [Date.new(year, 12, 21), "Vintersolverv"],
+    [Date.new(year, 12, 24), "Julaften"],
+    [Date.new(year, 12, 31), "Nyttårsaften"],
+  ].map { |date, name| [date, name, false] }
+
+  entries.sort_by { |d, _, _| d }
 end
 
 # -- GUI -----------------------------------------------------------------------
