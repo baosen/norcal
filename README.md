@@ -4,19 +4,38 @@ A local Norwegian desktop calendar.
 
 ![norcal screenshot](screenshot.png)
 
+## Install
+
+First, install the Tcl/Tk system libraries:
+
+```bash
+# Debian/Ubuntu
+sudo apt install libtk8.6 tk8.6-dev tcl8.6-dev
+
+# Fedora
+sudo dnf install tk-devel tcl-devel
+
+# macOS
+brew install tcl-tk
+```
+
+Then install norcal:
+
+```bash
+git clone https://github.com/baosen/norcal.git
+cd norcal
+gem build norcal.gemspec
+gem install norcal-1.0.0.gem
+```
+
 ## Usage
 
 ```
-./norcal              # current year, dark mode
-./norcal 2026         # specific year
-./norcal --light      # light mode
-./norcal --light 2026 # light mode, specific year
+norcal              # current year, dark mode
+norcal 2026         # specific year
+norcal --light      # light mode
+norcal --light 2026 # light mode, specific year
 ```
-
-## Requirements
-
-- Ruby with the `tk` gem (`gem install tk -- --with-tcl-include=/usr/include/tcl8.6 --with-tk-include=/usr/include/tcl8.6 --with-tcllib=tcl8.6 --with-tklib=tk8.6`)
-- Tcl/Tk 8.6 system libraries (`libtk8.6`, `tk8.6-dev`, `tcl8.6-dev`)
 
 ## Features
 
