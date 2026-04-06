@@ -130,18 +130,31 @@ end
 
 # -- GUI -----------------------------------------------------------------------
 
-BG       = '#ffffff'
-RED      = '#cc0000'
-GRAY     = '#999999'
-DKGRAY   = '#444444'
-BLACK    = '#000000'
-BORDER   = '#777777'
+THEME = {
+  light: {
+    bg: '#ffffff', fg: '#000000', title_fg: '#333333',
+    red: '#cc0000', gray: '#999999', dkgray: '#444444',
+    border: '#777777', today_bg: '#ffed6f', desc_fg: '#333333',
+    sep: '#777777', toggle_label: 'dark',
+  },
+  dark: {
+    bg: '#1e1e1e', fg: '#d4d4d4', title_fg: '#cccccc',
+    red: '#ff6b6b', gray: '#777777', dkgray: '#999999',
+    border: '#555555', today_bg: '#4a4400', desc_fg: '#aaaaaa',
+    sep: '#555555', toggle_label: 'light',
+  },
+}.freeze
 
+# Parse arguments: optional --light flag and optional year (dark is default)
+$dark = ARGV.delete('--light') ? false : true
 $year = (ARGV[0] || Date.today.year).to_i
+
+def theme
+  THEME[$dark ? :dark : :light]
+end
 
 root = TkRoot.new do
   title "norcal"
-  background BG
 end
 
 # Fonts
@@ -152,17 +165,13 @@ ft_cal_bold = TkFont.new(family: 'Noto Serif', size: 12, weight: 'bold')
 ft_note     = TkFont.new(family: 'Noto Serif', size: 11)
 ft_note_b   = TkFont.new(family: 'Noto Serif', size: 11, weight: 'bold')
 ft_note_d   = TkFont.new(family: 'Noto Serif', size: 11)
-
-# -- Title ---------------------------------------------------------------------
-
-TkLabel.new(root) {
-  text $year.to_s; font ft_title; foreground '#333333'; background BG
-}.pack(pady: [8, 2])
+ft_toggle   = TkFont.new(family: 'Noto Serif', size: 9)
 
 # -- Calendar content ----------------------------------------------------------
 
 def render_month(parent, year, month, holidays, fonts)
   ft_mheader, ft_cal, ft_cal_bold = fonts
+  t = theme
 
   first    = Date.new(year, month, 1)
   last_day = Date.new(year, month, -1)
@@ -170,31 +179,31 @@ def render_month(parent, year, month, holidays, fonts)
   today    = Date.today
 
   outer = TkFrame.new(parent) {
-    borderwidth 1; relief 'solid'; background BG
-    highlightbackground BORDER; highlightthickness 0
+    borderwidth 1; relief 'solid'; background t[:bg]
+    highlightbackground t[:border]; highlightthickness 0
   }
 
-  grid = TkFrame.new(outer) { background BG; padx 6; pady 4 }
+  grid = TkFrame.new(outer) { background t[:bg]; padx 6; pady 4 }
   grid.pack
 
   # Month name header
   TkLabel.new(grid) {
-    text MONTHS_NO[month - 1]; font ft_mheader; foreground BLACK; background BG
+    text MONTHS_NO[month - 1]; font ft_mheader; foreground t[:fg]; background t[:bg]
   }.grid(row: 0, column: 0, columnspan: 8, pady: [0, 2])
 
   # Day-name headers
   TkLabel.new(grid) {
-    text 'Uke'; font ft_cal; foreground DKGRAY; background BG
+    text 'Uke'; font ft_cal; foreground t[:dkgray]; background t[:bg]
   }.grid(row: 1, column: 0, sticky: 'e', padx: [0, 4])
 
   DAYS_NO.each_with_index do |d, i|
     fg = case i
-         when 5 then GRAY   # Lørdag
-         when 6 then RED    # Søndag
-         else BLACK
+         when 5 then t[:gray]
+         when 6 then t[:red]
+         else t[:fg]
          end
     TkLabel.new(grid) {
-      text d; font ft_cal_bold; foreground fg; background BG
+      text d; font ft_cal_bold; foreground fg; background t[:bg]
     }.grid(row: 1, column: i + 1, sticky: 'e')
   end
 
@@ -203,7 +212,7 @@ def render_month(parent, year, month, holidays, fonts)
   cur = monday
   while cur <= last_day
     TkLabel.new(grid) {
-      text cur.cweek.to_s; font ft_cal; foreground DKGRAY; background BG
+      text cur.cweek.to_s; font ft_cal; foreground t[:dkgray]; background t[:bg]
     }.grid(row: row, column: 0, sticky: 'e', padx: [0, 4])
 
     7.times do |i|
@@ -212,15 +221,15 @@ def render_month(parent, year, month, holidays, fonts)
         is_red   = day.cwday == 7 || holidays.key?(day)
         is_sat   = day.cwday == 6 && !holidays.key?(day)
         is_today = day == today
-        fg = if is_red then RED
-             elsif is_sat then GRAY
-             else BLACK
+        fg = if is_red then t[:red]
+             elsif is_sat then t[:gray]
+             else t[:fg]
              end
         TkLabel.new(grid) {
           text day.day.to_s
           font(is_today ? ft_cal_bold : ft_cal)
           foreground fg
-          background(is_today ? '#ffed6f' : BG)
+          background(is_today ? t[:today_bg] : t[:bg])
         }.grid(row: row, column: i + 1, sticky: 'e')
       end
     end
@@ -230,7 +239,7 @@ def render_month(parent, year, month, holidays, fonts)
 
   # Pad empty rows so all months have the same height (max 6 week rows)
   while row < 8
-    TkLabel.new(grid) { text ' '; font ft_cal; background BG }
+    TkLabel.new(grid) { text ' '; font ft_cal; background t[:bg] }
       .grid(row: row, column: 0)
     row += 1
   end
@@ -243,6 +252,7 @@ end
 
 def render_notable(parent, year, fonts)
   ft_note, ft_note_b, ft_note_d = fonts
+  t = theme
   dates = notable_dates(year)
 
   # Split into 3 roughly-equal columns
@@ -250,24 +260,24 @@ def render_notable(parent, year, fonts)
   cols = dates.each_slice(third).to_a
 
   outer = TkFrame.new(parent) {
-    borderwidth 1; relief 'solid'; background BG
-    highlightbackground BORDER; highlightthickness 0
+    borderwidth 1; relief 'solid'; background t[:bg]
+    highlightbackground t[:border]; highlightthickness 0
   }
 
-  inner = TkFrame.new(outer) { background BG }
+  inner = TkFrame.new(outer) { background t[:bg] }
   inner.pack(padx: 5, pady: 5, fill: 'both')
 
   cols.each_with_index do |entries, ci|
     tw = TkText.new(inner) {
       width 1; height(entries.size + 4)
       font ft_note; borderwidth 0; highlightthickness 0
-      wrap 'word'; background BG; padx 3; pady 2
+      wrap 'word'; background t[:bg]; padx 3; pady 2
       cursor ''; insertwidth 0
       tabs '65'
     }
-    tw.tag_configure('dt',  foreground: BLACK, font: ft_note_b)
-    tw.tag_configure('dtr', foreground: RED,   font: ft_note_b)
-    tw.tag_configure('desc', foreground: '#333333', font: ft_note_d)
+    tw.tag_configure('dt',  foreground: t[:fg],  font: ft_note_b)
+    tw.tag_configure('dtr', foreground: t[:red],  font: ft_note_b)
+    tw.tag_configure('desc', foreground: t[:desc_fg], font: ft_note_d)
 
     entries.each_with_index do |(date, desc, is_red), i|
       dtag = is_red ? 'dtr' : 'dt'
@@ -285,7 +295,7 @@ def render_notable(parent, year, fonts)
 
     # vertical separator between columns (except after last)
     if ci < cols.size - 1
-      sep = TkFrame.new(inner) { background BORDER; width 1 }
+      sep = TkFrame.new(inner) { background t[:sep]; width 1 }
       sep.grid(row: 0, column: ci * 2 + 1, sticky: 'ns', padx: 4)
     end
   end
@@ -295,12 +305,13 @@ end
 
 def build_calendar(parent, year, fonts)
   ft_mheader, ft_cal, ft_cal_bold, ft_note, ft_note_b, ft_note_d = fonts
+  t = theme
   holidays = red_days(year)
 
-  frame = TkFrame.new(parent) { background BG }
+  frame = TkFrame.new(parent) { background t[:bg] }
 
   # Single grid for months and notable dates
-  grid_f = TkFrame.new(frame) { background BG }
+  grid_f = TkFrame.new(frame) { background t[:bg] }
   grid_f.pack(padx: 10, pady: [2, 8])
 
   12.times do |idx|
@@ -313,14 +324,46 @@ def build_calendar(parent, year, fonts)
   note_f = render_notable(grid_f, year, [ft_note, ft_note_b, ft_note_d])
   note_f.grid(row: 4, column: 0, columnspan: 3, padx: 3, pady: [4, 0], sticky: 'ew')
 
+  # Toggle button below notable dates
+  TkButton.new(grid_f) {
+    text t[:toggle_label]; font fonts[5]  # ft_note_d
+    relief 'flat'; borderwidth 0
+    foreground t[:dkgray]; background t[:bg]
+    activebackground t[:bg]; activeforeground t[:fg]
+    command { $dark = !$dark; $rebuild&.call }
+  }.grid(row: 5, column: 0, columnspan: 3, pady: [4, 0])
+
   3.times { |c| grid_f.grid_columnconfigure(c, weight: 1) }
 
   frame
 end
 
-root.title = "norcal - #{$year}"
-build_calendar(root, $year,
-               [ft_mheader, ft_cal, ft_cal_bold, ft_note, ft_note_b, ft_note_d])
-  .pack(fill: 'both', expand: true)
+# -- Title ---------------------------------------------------------------------
 
+$top = TkFrame.new(root) { background theme[:bg] }
+$top.pack(fill: 'x', pady: [8, 2])
+
+$title_lbl = TkLabel.new($top) {
+  text $year.to_s; font ft_title; foreground theme[:title_fg]; background theme[:bg]
+}
+$title_lbl.pack
+
+# -- Build & rebuild -----------------------------------------------------------
+
+all_fonts = [ft_mheader, ft_cal, ft_cal_bold, ft_note, ft_note_b, ft_note_d]
+$content = nil
+$rebuild = nil
+
+$rebuild = proc {
+  t = theme
+  $content&.destroy
+  root.configure(background: t[:bg])
+  $top.configure(background: t[:bg])
+  $title_lbl.configure(foreground: t[:title_fg], background: t[:bg])
+  root.title = "norcal - #{$year}"
+  $content = build_calendar(root, $year, all_fonts)
+  $content.pack(fill: 'both', expand: true)
+}
+
+$rebuild.call
 Tk.mainloop
