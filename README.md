@@ -31,7 +31,7 @@ gem install norcal
 git clone https://github.com/baosen/norcal.git
 cd norcal
 gem build norcal.gemspec
-gem install norcal-1.1.0.gem
+gem install norcal-1.2.0.gem
 ```
 
 ## Usage
