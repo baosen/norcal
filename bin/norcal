@@ -61,13 +61,13 @@ end
 def red_days(year)
   e = easter(year)
   {
-    Date.new(year, 1, 1)   => "Nyttårsdag",
+    Date.new(year, 1, 1)   => "Første nyttårsdag",
     e - 3                   => "Skjærtorsdag",
     e - 2                   => "Langfredag",
     e                       => "1. påskedag",
     e + 1                   => "2. påskedag",
     Date.new(year, 5, 1)   => "Arbeidernes dag",
-    e + 39                  => "Kr. Himmelfartsdag",
+    e + 39                  => "Kristi himmelfartsdag",
     Date.new(year, 5, 17)  => "Grunnlovsdag",
     e + 49                  => "1. pinsedag",
     e + 50                  => "2. pinsedag",
@@ -87,44 +87,55 @@ def notable_dates(year)
   nov27         = Date.new(year, 11, 27)
   advent1       = nov27 + ((7 - nov27.cwday) % 7)
 
+  botsdag = last_wday(year, 10, 7)  # last Sunday in October
+
   [
-    [Date.new(year, 1, 1),   "Nyttårsdag",                                    true],
+    [Date.new(year, 1, 1),   "Første nyttårsdag",                                    true],
     [Date.new(year, 1, 21),  "Prinsesse Ingrid Alexandra, #{year - 2004} år", false],
     [Date.new(year, 2, 6),   "Samefolkets dag",                               false],
     [morsdag,                 "Morsdag",                                        false],
-    [Date.new(year, 2, 14),  "St. Valentines dag",                             false],
+    [Date.new(year, 2, 14),  "Valentinsdag",                                   false],
     [fastelavn,               "Fastelavn",                                      false],
     [Date.new(year, 2, 21),  "Kong Harald, #{year - 1937} år",                 false],
+    [Date.new(year, 3, 8),   "Kvinnedagen",                                    false],
     [Date.new(year, 3, 20),  "Vårjevndøgn",                                    false],
     [sommer_start,            "Sommertid start",                                false],
     [e - 7,                   "Palmesøndag",                                    true],
     [e - 3,                   "Skjærtorsdag",                                   true],
     [e - 2,                   "Langfredag",                                     true],
+    [e - 1,                   "Påskeaften",                                     false],
     [e,                       "1. påskedag",                                    true],
     [e + 1,                   "2. påskedag",                                    true],
     [Date.new(year, 5, 1),   "Arbeidernes dag",                                true],
     [Date.new(year, 5, 8),   "Frigjøringsdag 1945",                            false],
-    [e + 39,                  "Kr. Himmelfartsdag",                             true],
+    [e + 39,                  "Kristi himmelfartsdag",                             true],
     [Date.new(year, 5, 17),  "Grunnlovsdag 1814",                              true],
+    [e + 48,                  "Pinseaften",                                     false],
     [e + 49,                  "1. pinsedag",                                    true],
     [e + 50,                  "2. pinsedag",                                    true],
     [Date.new(year, 6, 7),   "Unionsoppløsning 1905",                          false],
     [Date.new(year, 6, 21),  "Sommersolverv",                                   false],
-    [Date.new(year, 6, 23),  "Jonsokaften",                                    false],
+    [Date.new(year, 6, 23),  "Sankthansaften",                                 false],
     [Date.new(year, 7, 4),   "Dronning Sonja, #{year - 1937} år",             false],
     [Date.new(year, 7, 20),  "Kronprins Haakon, #{year - 1973} år",           false],
     [Date.new(year, 7, 29),  "Olsokdagen",                                    false],
     [Date.new(year, 8, 19),  "Kronprinsesse Mette-Marit, #{year - 1973} år",  false],
     [Date.new(year, 9, 23),  "Høstjevndøgn",                                   false],
+    [botsdag,                 "Bots- og bededag",                               false],
     [sommer_slutt,            "Sommertid slutt",                                false],
     [Date.new(year, 10, 31), "Halloween",                                      false],
     [Date.new(year, 11, 1),  "Allehelgensdag",                                false],
     [farsdag,                 "Farsdag",                                        false],
     [advent1,                 "1. søndag i advent",                             false],
+    [advent1 + 7,             "2. søndag i advent",                             false],
     [Date.new(year, 12, 13), "Luciadagen",                                    false],
+    [advent1 + 14,            "3. søndag i advent",                             false],
+    [advent1 + 21,            "4. søndag i advent",                             false],
     [Date.new(year, 12, 21), "Vintersolverv",                                  false],
+    [Date.new(year, 12, 24), "Julaften",                                       false],
     [Date.new(year, 12, 25), "1. juledag",                                     true],
     [Date.new(year, 12, 26), "2. juledag",                                     true],
+    [Date.new(year, 12, 31), "Nyttårsaften",                                   false],
   ].sort_by { |d, _, _| d }
 end
 
@@ -149,6 +160,7 @@ THEME = {
 $dark = ARGV.delete('--light') ? false : true
 $year = (ARGV[0] || Date.today.year).to_i
 $zoom = 0
+$red_only = false
 
 def theme
   THEME[$dark ? :dark : :light]
@@ -179,7 +191,8 @@ end
 # All trackable widgets, grouped by update type.
 # Labels store {w: widget, fg: theme_key, bg: theme_key, font: font_key}.
 # Buttons store {w: widget, fg: theme_key, text_key: theme_key or nil, text: static}.
-$w = { bg: [], border: [], sep: [], labels: [], texts: [], buttons: [] }
+$w  = { bg: [], border: [], sep: [], labels: [], texts: [], buttons: [] }
+$wn = { bg: [], border: [], sep: [], texts: [] }  # notable-only (rebuilt on filter)
 
 # Apply current theme + zoom to all tracked widgets (no widget recreation).
 def restyle
@@ -191,15 +204,15 @@ def restyle
   $scrollbar.configure(background: t[:bg], troughcolor: t[:bg])
   $root.title = "Kalender #{$year}"
 
-  $w[:bg].each     { |w| w.configure(background: t[:bg]) }
-  $w[:border].each { |w| w.configure(background: t[:bg], highlightbackground: t[:border]) }
-  $w[:sep].each    { |w| w.configure(background: t[:sep]) }
+  ($w[:bg] + $wn[:bg]).each         { |w| w.configure(background: t[:bg]) }
+  ($w[:border] + $wn[:border]).each { |w| w.configure(background: t[:bg], highlightbackground: t[:border]) }
+  ($w[:sep] + $wn[:sep]).each       { |w| w.configure(background: t[:sep]) }
 
   $w[:labels].each do |e|
     e[:w].configure(foreground: t[e[:fg]], background: t[e[:bg]], font: f[e[:font]])
   end
 
-  $w[:texts].each do |tw|
+  ($w[:texts] + $wn[:texts]).each do |tw|
     tab = [65 + $zoom * 4, 40].max
     tw.configure(background: t[:bg], font: f[:note], tabs: tab.to_s)
     tw.tag_configure('dt',   foreground: t[:fg],      font: f[:note_b])
@@ -208,7 +221,7 @@ def restyle
   end
 
   $w[:buttons].each do |e|
-    text = e[:text_key] ? t[e[:text_key]] : e[:text]
+    text = e[:text_key] ? t[e[:text_key]] : (e[:text].respond_to?(:call) ? e[:text].call : e[:text])
     e[:w].configure(text: text, font: f[:btn], foreground: t[e[:fg]],
                     background: t[:bg], activebackground: t[:bg], activeforeground: t[:fg])
   end
@@ -282,15 +295,18 @@ def build_month(parent, year, month, holidays)
 end
 
 def build_notable(parent, year)
+  $wn.each_value(&:clear)
+
   dates = notable_dates(year)
-  third = (dates.size / 3.0).ceil
+  dates = dates.select { |_, _, is_red| is_red } if $red_only
+  third = [(dates.size / 3.0).ceil, 1].max
   cols  = dates.each_slice(third).to_a
 
   outer = TkFrame.new(parent) { borderwidth 1; relief 'solid'; highlightthickness 0 }
-  $w[:border] << outer
+  $wn[:border] << outer
 
   inner = TkFrame.new(outer)
-  $w[:bg] << inner
+  $wn[:bg] << inner
   inner.pack(padx: 5, pady: 5, fill: 'both')
 
   cols.each_with_index do |entries, ci|
@@ -299,7 +315,7 @@ def build_notable(parent, year)
       borderwidth 0; highlightthickness 0
       wrap 'word'; padx 3; pady 2; cursor ''; insertwidth 0
     }
-    $w[:texts] << tw
+    $wn[:texts] << tw
 
     entries.each_with_index do |(date, desc, is_red), i|
       dtag = is_red ? 'dtr' : 'dt'
@@ -315,11 +331,18 @@ def build_notable(parent, year)
 
     if ci < cols.size - 1
       sep = TkFrame.new(inner) { width 1 }
-      $w[:sep] << sep
+      $wn[:sep] << sep
       sep.grid(row: 0, column: ci * 2 + 1, sticky: 'ns', padx: 4)
     end
   end
   outer
+end
+
+def rebuild_notable
+  $notable_frame&.destroy
+  $notable_frame = build_notable($notable_parent, $year)
+  $notable_frame.grid(row: 4, column: 0, columnspan: 3, padx: 3, pady: [4, 0], sticky: 'ew')
+  restyle
 end
 
 def build_buttons(parent)
@@ -342,6 +365,17 @@ def build_buttons(parent)
   b4 = TkButton.new(btn_bar) { relief 'flat'; borderwidth 0; command { $fit.call(false) } }
   $w[:buttons] << { w: b4, fg: :dkgray, text_key: nil, text: 'fit' }
   b4.pack(side: 'left', padx: 2)
+
+  b5 = TkButton.new(btn_bar) { relief 'flat'; borderwidth 0
+    command {
+      $red_only = !$red_only
+      rebuild_notable
+      restyle  # update button text
+    }
+  }
+  $w[:buttons] << { w: b5, fg: :dkgray, text_key: nil,
+                    text: -> { $red_only ? 'alle dager' : "bare r\u00f8de dager" } }
+  b5.pack(side: 'left', padx: 2)
 end
 
 def build_all(year)
@@ -370,8 +404,9 @@ def build_all(year)
       .grid(row: idx / 3, column: idx % 3, padx: 3, pady: 3, sticky: 'nsew')
   end
 
-  build_notable(grid_f, year)
-    .grid(row: 4, column: 0, columnspan: 3, padx: 3, pady: [4, 0], sticky: 'ew')
+  $notable_parent = grid_f
+  $notable_frame = build_notable(grid_f, year)
+  $notable_frame.grid(row: 4, column: 0, columnspan: 3, padx: 3, pady: [4, 0], sticky: 'ew')
 
   build_buttons(grid_f)
   3.times { |c| grid_f.grid_columnconfigure(c, weight: 1) }

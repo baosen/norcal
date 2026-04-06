@@ -31,7 +31,7 @@ gem install norcal
 git clone https://github.com/baosen/norcal.git
 cd norcal
 gem build norcal.gemspec
-gem install norcal-1.2.0.gem
+gem install norcal-1.3.0.gem
 ```
 
 ## Usage
@@ -49,7 +49,8 @@ norcal --light 2026 # light mode, specific year
 - ISO week numbers, Monday-first weeks
 - Sundays and public holidays in red, Saturdays in gray
 - Easter-based movable holidays (Computus algorithm)
-- Notable dates: royal birthdays, Samefolkets dag, Morsdag, Farsdag, solverv, sommertid, and more
+- Notable dates: royal birthdays, Samefolkets dag, Morsdag, Farsdag, solverv, sommertid, advent, and more
+- Filter to show only red days (public holidays)
 - Today highlighted with yellow background
 - Dark mode (default) and light mode, with toggle button
 - Zoom in/out (`+`/`–` buttons, Ctrl+scroll, Ctrl++/Ctrl+-)
