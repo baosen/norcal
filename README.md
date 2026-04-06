@@ -31,7 +31,7 @@ gem install norcal
 git clone https://github.com/baosen/norcal.git
 cd norcal
 gem build norcal.gemspec
-gem install norcal-1.0.0.gem
+gem install norcal-1.1.0.gem
 ```
 
 ## Usage
@@ -52,6 +52,9 @@ norcal --light 2026 # light mode, specific year
 - Notable dates: royal birthdays, Samefolkets dag, Morsdag, Farsdag, solverv, sommertid, and more
 - Today highlighted with yellow background
 - Dark mode (default) and light mode, with toggle button
+- Zoom in/out (`+`/`–` buttons, Ctrl+scroll, Ctrl++/Ctrl+-)
+- Auto-fit to screen height on startup, with `fit` button
+- Scrollbar for zoomed-in views
 
 ## License
 

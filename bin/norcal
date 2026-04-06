@@ -66,7 +66,7 @@ def red_days(year)
     e - 2                   => "Langfredag",
     e                       => "1. påskedag",
     e + 1                   => "2. påskedag",
-    Date.new(year, 5, 1)   => "Off. høgtidsdag",
+    Date.new(year, 5, 1)   => "Arbeidernes dag",
     e + 39                  => "Kr. Himmelfartsdag",
     Date.new(year, 5, 17)  => "Grunnlovsdag",
     e + 49                  => "1. pinsedag",
@@ -102,7 +102,7 @@ def notable_dates(year)
     [e - 2,                   "Langfredag",                                     true],
     [e,                       "1. påskedag",                                    true],
     [e + 1,                   "2. påskedag",                                    true],
-    [Date.new(year, 5, 1),   "Off. høgtidsdag",                                true],
+    [Date.new(year, 5, 1),   "Arbeidernes dag",                                true],
     [Date.new(year, 5, 8),   "Frigjøringsdag 1945",                            false],
     [e + 39,                  "Kr. Himmelfartsdag",                             true],
     [Date.new(year, 5, 17),  "Grunnlovsdag 1814",                              true],
@@ -148,29 +148,35 @@ THEME = {
 # Parse arguments: optional --light flag and optional year (dark is default)
 $dark = ARGV.delete('--light') ? false : true
 $year = (ARGV[0] || Date.today.year).to_i
+$zoom = 0
 
 def theme
   THEME[$dark ? :dark : :light]
+end
+
+FONT = 'Noto Serif'
+
+def make_fonts
+  z = $zoom
+  {
+    title:    TkFont.new(family: FONT, size: 22 + z, weight: 'bold'),
+    mheader:  TkFont.new(family: FONT, size: 13 + z, weight: 'bold'),
+    cal:      TkFont.new(family: FONT, size: 12 + z),
+    cal_bold: TkFont.new(family: FONT, size: 12 + z, weight: 'bold'),
+    note:     TkFont.new(family: FONT, size: 11 + z),
+    note_b:   TkFont.new(family: FONT, size: 11 + z, weight: 'bold'),
+    note_d:   TkFont.new(family: FONT, size: 11 + z),
+    btn:      TkFont.new(family: FONT, size: 9 + z),
+  }
 end
 
 root = TkRoot.new do
   title "norcal"
 end
 
-# Fonts
-ft_title    = TkFont.new(family: 'Noto Serif', size: 22, weight: 'bold')
-ft_mheader  = TkFont.new(family: 'Noto Serif', size: 13, weight: 'bold')
-ft_cal      = TkFont.new(family: 'Noto Serif', size: 12)
-ft_cal_bold = TkFont.new(family: 'Noto Serif', size: 12, weight: 'bold')
-ft_note     = TkFont.new(family: 'Noto Serif', size: 11)
-ft_note_b   = TkFont.new(family: 'Noto Serif', size: 11, weight: 'bold')
-ft_note_d   = TkFont.new(family: 'Noto Serif', size: 11)
-ft_toggle   = TkFont.new(family: 'Noto Serif', size: 9)
-
 # -- Calendar content ----------------------------------------------------------
 
-def render_month(parent, year, month, holidays, fonts)
-  ft_mheader, ft_cal, ft_cal_bold = fonts
+def render_month(parent, year, month, holidays, f)
   t = theme
 
   first    = Date.new(year, month, 1)
@@ -188,12 +194,12 @@ def render_month(parent, year, month, holidays, fonts)
 
   # Month name header
   TkLabel.new(grid) {
-    text MONTHS_NO[month - 1]; font ft_mheader; foreground t[:fg]; background t[:bg]
+    text MONTHS_NO[month - 1]; font f[:mheader]; foreground t[:fg]; background t[:bg]
   }.grid(row: 0, column: 0, columnspan: 8, pady: [0, 2])
 
   # Day-name headers
   TkLabel.new(grid) {
-    text 'Uke'; font ft_cal; foreground t[:dkgray]; background t[:bg]
+    text 'Uke'; font f[:cal]; foreground t[:dkgray]; background t[:bg]
   }.grid(row: 1, column: 0, sticky: 'e', padx: [0, 4])
 
   DAYS_NO.each_with_index do |d, i|
@@ -203,7 +209,7 @@ def render_month(parent, year, month, holidays, fonts)
          else t[:fg]
          end
     TkLabel.new(grid) {
-      text d; font ft_cal_bold; foreground fg; background t[:bg]
+      text d; font f[:cal_bold]; foreground fg; background t[:bg]
     }.grid(row: 1, column: i + 1, sticky: 'e')
   end
 
@@ -212,7 +218,7 @@ def render_month(parent, year, month, holidays, fonts)
   cur = monday
   while cur <= last_day
     TkLabel.new(grid) {
-      text cur.cweek.to_s; font ft_cal; foreground t[:dkgray]; background t[:bg]
+      text cur.cweek.to_s; font f[:cal]; foreground t[:dkgray]; background t[:bg]
     }.grid(row: row, column: 0, sticky: 'e', padx: [0, 4])
 
     7.times do |i|
@@ -227,7 +233,7 @@ def render_month(parent, year, month, holidays, fonts)
              end
         TkLabel.new(grid) {
           text day.day.to_s
-          font(is_today ? ft_cal_bold : ft_cal)
+          font(is_today ? f[:cal_bold] : f[:cal])
           foreground fg
           background(is_today ? t[:today_bg] : t[:bg])
         }.grid(row: row, column: i + 1, sticky: 'e')
@@ -239,7 +245,7 @@ def render_month(parent, year, month, holidays, fonts)
 
   # Pad empty rows so all months have the same height (max 6 week rows)
   while row < 8
-    TkLabel.new(grid) { text ' '; font ft_cal; background t[:bg] }
+    TkLabel.new(grid) { text ' '; font f[:cal]; background t[:bg] }
       .grid(row: row, column: 0)
     row += 1
   end
@@ -250,8 +256,7 @@ def render_month(parent, year, month, holidays, fonts)
   outer
 end
 
-def render_notable(parent, year, fonts)
-  ft_note, ft_note_b, ft_note_d = fonts
+def render_notable(parent, year, f)
   t = theme
   dates = notable_dates(year)
 
@@ -270,14 +275,14 @@ def render_notable(parent, year, fonts)
   cols.each_with_index do |entries, ci|
     tw = TkText.new(inner) {
       width 1; height(entries.size + 4)
-      font ft_note; borderwidth 0; highlightthickness 0
+      font f[:note]; borderwidth 0; highlightthickness 0
       wrap 'word'; background t[:bg]; padx 3; pady 2
       cursor ''; insertwidth 0
       tabs '65'
     }
-    tw.tag_configure('dt',  foreground: t[:fg],  font: ft_note_b)
-    tw.tag_configure('dtr', foreground: t[:red],  font: ft_note_b)
-    tw.tag_configure('desc', foreground: t[:desc_fg], font: ft_note_d)
+    tw.tag_configure('dt',  foreground: t[:fg],  font: f[:note_b])
+    tw.tag_configure('dtr', foreground: t[:red],  font: f[:note_b])
+    tw.tag_configure('desc', foreground: t[:desc_fg], font: f[:note_d])
 
     entries.each_with_index do |(date, desc, is_red), i|
       dtag = is_red ? 'dtr' : 'dt'
@@ -303,8 +308,7 @@ def render_notable(parent, year, fonts)
   outer
 end
 
-def build_calendar(parent, year, fonts)
-  ft_mheader, ft_cal, ft_cal_bold, ft_note, ft_note_b, ft_note_d = fonts
+def build_calendar(parent, year, f)
   t = theme
   holidays = red_days(year)
 
@@ -315,55 +319,171 @@ def build_calendar(parent, year, fonts)
   grid_f.pack(padx: 10, pady: [2, 8])
 
   12.times do |idx|
-    m_frame = render_month(grid_f, year, idx + 1, holidays,
-                           [ft_mheader, ft_cal, ft_cal_bold])
+    m_frame = render_month(grid_f, year, idx + 1, holidays, f)
     m_frame.grid(row: idx / 3, column: idx % 3, padx: 3, pady: 3, sticky: 'nsew')
   end
 
   # Notable dates in row 4, spanning all 3 month columns
-  note_f = render_notable(grid_f, year, [ft_note, ft_note_b, ft_note_d])
+  note_f = render_notable(grid_f, year, f)
   note_f.grid(row: 4, column: 0, columnspan: 3, padx: 3, pady: [4, 0], sticky: 'ew')
 
-  # Toggle button below notable dates
-  TkButton.new(grid_f) {
-    text t[:toggle_label]; font fonts[5]  # ft_note_d
+  # Button bar: toggle + zoom
+  btn_bar = TkFrame.new(grid_f) { background t[:bg] }
+  btn_bar.grid(row: 5, column: 0, columnspan: 3, pady: [4, 0])
+
+  TkButton.new(btn_bar) {
+    text t[:toggle_label]; font f[:btn]
     relief 'flat'; borderwidth 0
     foreground t[:dkgray]; background t[:bg]
     activebackground t[:bg]; activeforeground t[:fg]
     command { $dark = !$dark; $rebuild&.call }
-  }.grid(row: 5, column: 0, columnspan: 3, pady: [4, 0])
+  }.pack(side: 'left', padx: 4)
+
+  TkButton.new(btn_bar) {
+    text '+'; font f[:btn]
+    relief 'flat'; borderwidth 0
+    foreground t[:dkgray]; background t[:bg]
+    activebackground t[:bg]; activeforeground t[:fg]
+    command { $zoom += 1; $rebuild&.call }
+  }.pack(side: 'left', padx: 2)
+
+  TkButton.new(btn_bar) {
+    text "\u2013"; font f[:btn]  # en-dash for minus
+    relief 'flat'; borderwidth 0
+    foreground t[:dkgray]; background t[:bg]
+    activebackground t[:bg]; activeforeground t[:fg]
+    command { $zoom -= 1 if $zoom > -8; $rebuild&.call }
+  }.pack(side: 'left', padx: 2)
+
+  TkButton.new(btn_bar) {
+    text 'fit'; font f[:btn]
+    relief 'flat'; borderwidth 0
+    foreground t[:dkgray]; background t[:bg]
+    activebackground t[:bg]; activeforeground t[:fg]
+    command { $fit&.call }
+  }.pack(side: 'left', padx: 2)
 
   3.times { |c| grid_f.grid_columnconfigure(c, weight: 1) }
 
   frame
 end
 
-# -- Title ---------------------------------------------------------------------
+# -- Scrollable wrapper --------------------------------------------------------
 
-$top = TkFrame.new(root) { background theme[:bg] }
-$top.pack(fill: 'x', pady: [8, 2])
-
-$title_lbl = TkLabel.new($top) {
-  text $year.to_s; font ft_title; foreground theme[:title_fg]; background theme[:bg]
+$scrollbar = TkScrollbar.new(root)
+$canvas = TkCanvas.new(root) {
+  highlightthickness 0; borderwidth 0
 }
-$title_lbl.pack
+$canvas.configure(yscrollcommand: proc { |*a| $scrollbar.set(*a) })
+$scrollbar.command(proc { |*a| $canvas.yview(*a) })
+
+$scrollbar.pack(side: 'right', fill: 'y')
+$canvas.pack(side: 'left', fill: 'both', expand: true)
+
+# Mouse wheel scrolling
+root.bind('MouseWheel') { |e| $canvas.yview_scroll(-e.delta / 120, 'units') }
+root.bind('Button-4') { $canvas.yview_scroll(-3, 'units') }
+root.bind('Button-5') { $canvas.yview_scroll(3, 'units') }
+
+# Keyboard zoom: Ctrl++ and Ctrl+-
+root.bind('Control-plus')  { $zoom += 1; $rebuild&.call }
+root.bind('Control-equal') { $zoom += 1; $rebuild&.call }  # Ctrl+= (unshifted +)
+root.bind('Control-minus') { $zoom -= 1 if $zoom > -8; $rebuild&.call }
+
+# Ctrl+mouse wheel zoom
+root.bind('Control-MouseWheel') { |e|
+  if e.delta > 0 then $zoom += 1 else $zoom -= 1 if $zoom > -8 end
+  $rebuild&.call
+}
+root.bind('Control-Button-4') { $zoom += 1; $rebuild&.call }
+root.bind('Control-Button-5') { $zoom -= 1 if $zoom > -8; $rebuild&.call }
 
 # -- Build & rebuild -----------------------------------------------------------
 
-all_fonts = [ft_mheader, ft_cal, ft_cal_bold, ft_note, ft_note_b, ft_note_d]
-$content = nil
+$inner_frame = nil
 $rebuild = nil
 
 $rebuild = proc {
   t = theme
-  $content&.destroy
+  f = make_fonts
+
+  $inner_frame&.destroy
   root.configure(background: t[:bg])
-  $top.configure(background: t[:bg])
-  $title_lbl.configure(foreground: t[:title_fg], background: t[:bg])
+  $canvas.configure(background: t[:bg])
+  $scrollbar.configure(background: t[:bg], troughcolor: t[:bg])
   root.title = "norcal - #{$year}"
-  $content = build_calendar(root, $year, all_fonts)
-  $content.pack(fill: 'both', expand: true)
+
+  $inner_frame = TkFrame.new($canvas) { background t[:bg] }
+
+  # Title
+  TkLabel.new($inner_frame) {
+    text $year.to_s; font f[:title]; foreground t[:title_fg]; background t[:bg]
+  }.pack(pady: [8, 2])
+
+  # Calendar content
+  build_calendar($inner_frame, $year, f).pack(fill: 'both', expand: true)
+
+  # Embed frame in canvas, centered
+  $canvas.delete('all')
+  $canvas_win = $canvas.create(:window, 0, 0, window: $inner_frame, anchor: 'nw')
+
+  # Center content and update scroll region on resize
+  center_content = proc {
+    cw = $canvas.winfo_width
+    ch = $canvas.winfo_height
+    fw = $inner_frame.winfo_reqwidth
+    fh = $inner_frame.winfo_reqheight
+    x = [(cw - fw) / 2, 0].max
+    y = [(ch - fh) / 2, 0].max
+    $canvas.coords($canvas_win, x, y)
+    $canvas.configure(scrollregion: "#{0} #{0} #{[cw, fw].max} #{[ch, fh].max}")
+  }
+
+  $inner_frame.bind('Configure', center_content)
+  $canvas.bind('Configure', center_content)
 }
 
+# Fit-to-window: zoom so content fills available height, then resize window
+$fit = proc {
+  # Measure current content height and extrapolate target zoom
+  cur_h    = $inner_frame.winfo_reqheight.to_f
+  screen_h = root.winfo_screenheight - 80
+  base_avg = 13.0  # average base font size at zoom 0
+
+  if cur_h > 0 && screen_h > 0
+    # Current effective font size, and what it needs to be
+    cur_font  = base_avg + $zoom
+    target_font = cur_font * (screen_h / cur_h)
+    $zoom = (target_font - base_avg).floor
+    $zoom = [$zoom, -8].max
+  end
+
+  $rebuild.call
+  Tk.update_idletasks
+
+  # If overshot, back off by one
+  if $inner_frame.winfo_reqheight > screen_h
+    $zoom -= 1
+    $rebuild.call
+    Tk.update_idletasks
+  end
+
+  # Size window to actual content, capped at screen
+  content_w = $inner_frame.winfo_reqwidth + 20
+  content_h = $inner_frame.winfo_reqheight
+  screen_w  = root.winfo_screenwidth
+  max_h     = root.winfo_screenheight - 50
+  w = [content_w, screen_w].min
+  h = [content_h, max_h].min
+  x = (screen_w - w) / 2
+  root.geometry("#{w}x#{h}+#{x}+0")
+}
+
+# Initial build, then fit to window (withdraw during startup to avoid flicker)
+root.withdraw
 $rebuild.call
+Tk.update_idletasks
+$fit.call
+root.deiconify
+
 Tk.mainloop
