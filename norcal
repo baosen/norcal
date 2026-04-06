@@ -132,7 +132,8 @@ end
 
 BG       = '#ffffff'
 RED      = '#cc0000'
-GRAY     = '#666666'
+GRAY     = '#999999'
+DKGRAY   = '#444444'
 BLACK    = '#000000'
 BORDER   = '#777777'
 
@@ -144,13 +145,13 @@ root = TkRoot.new do
 end
 
 # Fonts
-ft_title    = TkFont.new(family: 'Helvetica', size: 18, weight: 'bold')
-ft_mheader  = TkFont.new(family: 'Helvetica', size: 11, weight: 'bold')
-ft_cal      = TkFont.new(family: 'Courier',   size: 10)
-ft_cal_bold = TkFont.new(family: 'Courier',   size: 10, weight: 'bold')
-ft_note     = TkFont.new(family: 'Courier',   size: 9)
-ft_note_b   = TkFont.new(family: 'Courier',   size: 9, weight: 'bold')
-ft_note_d   = TkFont.new(family: 'Helvetica', size: 9)
+ft_title    = TkFont.new(family: 'Noto Serif', size: 22, weight: 'bold')
+ft_mheader  = TkFont.new(family: 'Noto Serif', size: 13, weight: 'bold')
+ft_cal      = TkFont.new(family: 'Noto Serif', size: 12)
+ft_cal_bold = TkFont.new(family: 'Noto Serif', size: 12, weight: 'bold')
+ft_note     = TkFont.new(family: 'Noto Serif', size: 11)
+ft_note_b   = TkFont.new(family: 'Noto Serif', size: 11, weight: 'bold')
+ft_note_d   = TkFont.new(family: 'Noto Serif', size: 11)
 
 # -- Title ---------------------------------------------------------------------
 
@@ -166,64 +167,77 @@ def render_month(parent, year, month, holidays, fonts)
   first    = Date.new(year, month, 1)
   last_day = Date.new(year, month, -1)
   monday   = first - (first.cwday - 1)
-
-  # Fixed height: 1 header + 1 day-name row + 6 max week rows = 8
-  fixed_h = 8
+  today    = Date.today
 
   outer = TkFrame.new(parent) {
     borderwidth 1; relief 'solid'; background BG
     highlightbackground BORDER; highlightthickness 0
   }
 
-  tw = TkText.new(outer) {
-    width 24; height fixed_h
-    font ft_cal; borderwidth 0; highlightthickness 0
-    wrap 'none'; background BG; padx 5; pady 4
-    cursor ''; insertwidth 0
-  }
+  grid = TkFrame.new(outer) { background BG; padx 6; pady 4 }
+  grid.pack
 
-  tw.tag_configure('hdr',  font: ft_mheader, justify: 'center', foreground: BLACK)
-  tw.tag_configure('dhdr', font: ft_cal_bold, foreground: BLACK)
-  tw.tag_configure('wk',   foreground: GRAY, font: ft_cal)
-  tw.tag_configure('n',    foreground: BLACK)
-  tw.tag_configure('r',    foreground: RED)
-  tw.tag_configure('rb',   foreground: RED, font: ft_cal_bold)
-  tw.tag_configure('today',  background: '#ffed6f', font: ft_cal_bold)
-  tw.tag_configure('todayr', background: '#ffed6f', font: ft_cal_bold, foreground: RED)
+  # Month name header
+  TkLabel.new(grid) {
+    text MONTHS_NO[month - 1]; font ft_mheader; foreground BLACK; background BG
+  }.grid(row: 0, column: 0, columnspan: 8, pady: [0, 2])
 
-  # Month name
-  tw.insert('end', "#{MONTHS_NO[month - 1]}\n", 'hdr')
+  # Day-name headers
+  TkLabel.new(grid) {
+    text 'Uke'; font ft_cal; foreground DKGRAY; background BG
+  }.grid(row: 1, column: 0, sticky: 'e', padx: [0, 4])
 
-  # Day-name header
-  tw.insert('end', 'Uke', 'wk')
-  DAYS_NO[0..5].each { |d| tw.insert('end', " #{d}", 'dhdr') }
-  tw.insert('end', " S\u00f8\n", 'rb')
+  DAYS_NO.each_with_index do |d, i|
+    fg = case i
+         when 5 then GRAY   # Lørdag
+         when 6 then RED    # Søndag
+         else BLACK
+         end
+    TkLabel.new(grid) {
+      text d; font ft_cal_bold; foreground fg; background BG
+    }.grid(row: 1, column: i + 1, sticky: 'e')
+  end
 
   # Week rows
-  today = Date.today
+  row = 2
   cur = monday
   while cur <= last_day
-    tw.insert('end', format('%2d ', cur.cweek), 'wk')
+    TkLabel.new(grid) {
+      text cur.cweek.to_s; font ft_cal; foreground DKGRAY; background BG
+    }.grid(row: row, column: 0, sticky: 'e', padx: [0, 4])
+
     7.times do |i|
       day = cur + i
       if day.month == month && day.year == year
-        is_red = day.cwday == 7 || holidays.key?(day)
-        tag = if day == today
-                is_red ? 'todayr' : 'today'
-              else
-                is_red ? 'r' : 'n'
-              end
-        tw.insert('end', format('%3d', day.day), tag)
-      else
-        tw.insert('end', '   ')
+        is_red   = day.cwday == 7 || holidays.key?(day)
+        is_sat   = day.cwday == 6 && !holidays.key?(day)
+        is_today = day == today
+        fg = if is_red then RED
+             elsif is_sat then GRAY
+             else BLACK
+             end
+        TkLabel.new(grid) {
+          text day.day.to_s
+          font(is_today ? ft_cal_bold : ft_cal)
+          foreground fg
+          background(is_today ? '#ffed6f' : BG)
+        }.grid(row: row, column: i + 1, sticky: 'e')
       end
     end
-    tw.insert('end', "\n")
+    row += 1
     cur += 7
   end
 
-  tw.state 'disabled'
-  tw.pack
+  # Pad empty rows so all months have the same height (max 6 week rows)
+  while row < 8
+    TkLabel.new(grid) { text ' '; font ft_cal; background BG }
+      .grid(row: row, column: 0)
+    row += 1
+  end
+
+  # Uniform column widths
+  (1..7).each { |c| grid.grid_columnconfigure(c, uniform: 'day', minsize: 22) }
+
   outer
 end
 
@@ -244,12 +258,12 @@ def render_notable(parent, year, fonts)
   inner.pack(padx: 5, pady: 5, fill: 'both')
 
   cols.each_with_index do |entries, ci|
-    # Extra lines needed when long descriptions wrap
     tw = TkText.new(inner) {
       width 1; height(entries.size + 4)
       font ft_note; borderwidth 0; highlightthickness 0
       wrap 'word'; background BG; padx 3; pady 2
       cursor ''; insertwidth 0
+      tabs '65'
     }
     tw.tag_configure('dt',  foreground: BLACK, font: ft_note_b)
     tw.tag_configure('dtr', foreground: RED,   font: ft_note_b)
@@ -257,8 +271,9 @@ def render_notable(parent, year, fonts)
 
     entries.each_with_index do |(date, desc, is_red), i|
       dtag = is_red ? 'dtr' : 'dt'
-      date_str = format('%2d. %-3s  ', date.day, MABBR_NO[date.month - 1])
+      date_str = "#{date.day}. #{MABBR_NO[date.month - 1]}"
       tw.insert('end', date_str, dtag)
+      tw.insert('end', "\t")
       tw.insert('end', desc, 'desc')
       tw.insert('end', "\n") unless i == entries.size - 1
     end
