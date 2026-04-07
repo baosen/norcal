@@ -23,8 +23,9 @@ MONTHS_NO = %w[
   Juli August September Oktober November Desember
 ].freeze
 
-DAYS_NO  = %w[Ma Ti On To Fr Lø Sø].freeze
-MABBR_NO = %w[jan feb mar apr mai jun jul aug sep okt nov des].freeze
+DAYS_NO    = %w[Ma Ti On To Fr Lø Sø].freeze
+MABBR_NO   = %w[jan feb mar apr mai jun jul aug sep okt nov des].freeze
+QUARTERS   = ['1. kvartal', '2. kvartal', '3. kvartal', '4. kvartal'].freeze
 
 # -- Date helpers --------------------------------------------------------------
 
@@ -62,13 +63,14 @@ def red_days(year)
   e = easter(year)
   {
     Date.new(year, 1, 1)   => "Første nyttårsdag",
+    e - 7                   => "Palmesøndag",
     e - 3                   => "Skjærtorsdag",
     e - 2                   => "Langfredag",
     e                       => "1. påskedag",
     e + 1                   => "2. påskedag",
     Date.new(year, 5, 1)   => "Arbeidernes dag",
     e + 39                  => "Kristi himmelfartsdag",
-    Date.new(year, 5, 17)  => "Grunnlovsdagen",
+    Date.new(year, 5, 17)  => "Grunnlovsdagen 1814",
     e + 49                  => "1. pinsedag",
     e + 50                  => "2. pinsedag",
     Date.new(year, 12, 25) => "1. juledag",
@@ -92,21 +94,8 @@ def notable_dates(year)
   nov27         = Date.new(year, 11, 27)
   advent1       = nov27 + ((7 - nov27.cwday) % 7)
 
-  # Override display names for some red days in the notable list
-  notable_names = {
-    e + 39                 => "Kristi himmelfartsdag",
-    Date.new(year, 5, 17) => "Grunnlovsdagen 1814",
-  }
-
   # Start with all red days
-  entries = holidays.map { |date, name|
-    [date, notable_names[date] || name, true]
-  }
-
-  # Red-in-list but not a public holiday
-  entries += [
-    [e - 7, "Palmesøndag", true],
-  ]
+  entries = holidays.map { |date, name| [date, name, true] }
 
   # Non-red notable dates
   entries += [
@@ -195,6 +184,66 @@ $root = TkRoot.new do
   title "norcal"
 end
 
+# -- Tooltip -------------------------------------------------------------------
+
+$tooltip = TkToplevel.new($root) { withdraw; overrideredirect true }
+$tooltip_label = TkLabel.new($tooltip) {
+  justify 'left'; padx 6; pady 3; borderwidth 1; relief 'solid'; wraplength 0
+}
+$tooltip_label.pack
+
+# Make tooltip transparent to mouse events (X11 input passthrough)
+begin
+  Tk.tk_call('wm', 'attributes', $tooltip, '-type', 'tooltip')
+rescue; end
+
+def tooltip_show(widget, text)
+  t = theme
+  f = make_fonts
+  $tooltip_label.configure(
+    text: text, font: f[:btn], background: t[:bg], foreground: t[:fg],
+    highlightbackground: t[:border]
+  )
+  $tooltip.configure(background: t[:border])
+
+  # Force geometry recalculation so tooltip is never cropped
+  $tooltip.geometry('')
+  Tk.update_idletasks
+
+  # Position below the widget
+  x = widget.winfo_rootx
+  y = widget.winfo_rooty + widget.winfo_height + 2
+  # Keep on screen
+  screen_w = $root.winfo_screenwidth
+  screen_h = $root.winfo_screenheight
+  tip_w = $tooltip.winfo_reqwidth
+  tip_h = $tooltip.winfo_reqheight
+  x = screen_w - tip_w if x + tip_w > screen_w
+  y = widget.winfo_rooty - tip_h - 2 if y + tip_h > screen_h
+  $tooltip.geometry("+#{x}+#{y}")
+  $tooltip.deiconify
+  $tooltip.raise
+end
+
+def tooltip_hide
+  $tooltip.withdraw
+end
+
+def bind_tooltip(widget, text)
+  widget.bind('Enter') { tooltip_show(widget, text) }
+  widget.bind('Leave') { tooltip_hide }
+end
+
+# Build a lookup: Date -> [name, ...] for tooltips.
+# Uses red_days names directly (no overrides), plus non-red notable names.
+def date_names(year)
+  names = Hash.new { |h, k| h[k] = [] }
+  notable_dates(year).each do |d, n, _|
+    names[d] << n unless names[d].include?(n)
+  end
+  names
+end
+
 # -- Widget tracking for in-place updates --------------------------------------
 
 # All trackable widgets, grouped by update type.
@@ -238,7 +287,7 @@ end
 
 # -- Build calendar (one-time per year) ----------------------------------------
 
-def build_month(parent, year, month, holidays)
+def build_month(parent, year, month, holidays, names)
   first    = Date.new(year, month, 1)
   last_day = Date.new(year, month, -1)
   monday   = first - (first.cwday - 1)
@@ -283,9 +332,10 @@ def build_month(parent, year, month, holidays)
         bg_key   = is_today ? :today_bg : :bg
         font_key = is_today ? :cal_bold : :cal
 
-        lbl = TkLabel.new(grid) { text day.day.to_s }
+        lbl = TkLabel.new(grid) { text day.day.to_s; anchor 'e' }
         $w[:labels] << { w: lbl, fg: fg_key, bg: bg_key, font: font_key }
-        lbl.grid(row: row, column: i + 1, sticky: 'e')
+        lbl.grid(row: row, column: i + 1, sticky: 'nsew')
+        bind_tooltip(lbl, names[day].join("\n")) if names.key?(day)
       end
     end
     row += 1
@@ -350,14 +400,14 @@ end
 def rebuild_notable
   $notable_frame&.destroy
   $notable_frame = build_notable($notable_parent, $year)
-  $notable_frame.grid(row: 4, column: 0, columnspan: 3, padx: 3, pady: [4, 0], sticky: 'ew')
+  $notable_frame.grid(row: 8, column: 0, columnspan: 3, padx: 3, pady: [4, 0], sticky: 'ew')
   restyle
 end
 
 def build_buttons(parent)
   btn_bar = TkFrame.new(parent)
   $w[:bg] << btn_bar
-  btn_bar.grid(row: 5, column: 0, columnspan: 3, pady: [4, 0])
+  btn_bar.grid(row: 9, column: 0, columnspan: 3, pady: [4, 0])
 
   b1 = TkButton.new(btn_bar) { relief 'flat'; borderwidth 0; command { $dark = !$dark; restyle } }
   $w[:buttons] << { w: b1, fg: :dkgray, text_key: :toggle_label, text: nil }
@@ -392,6 +442,7 @@ def build_all(year)
   $inner_frame&.destroy
 
   holidays = red_days(year)
+  names    = date_names(year)
 
   $inner_frame = TkFrame.new($canvas)
   $w[:bg] << $inner_frame
@@ -408,14 +459,23 @@ def build_all(year)
   $w[:bg] << grid_f
   grid_f.pack
 
-  12.times do |idx|
-    build_month(grid_f, year, idx + 1, holidays)
-      .grid(row: idx / 3, column: idx % 3, padx: 3, pady: 3, sticky: 'nsew')
+  4.times do |q|
+    label_row = q * 2
+    month_row = q * 2 + 1
+
+    qlbl = TkLabel.new(grid_f) { text QUARTERS[q] }
+    $w[:labels] << { w: qlbl, fg: :dkgray, bg: :bg, font: :cal }
+    qlbl.grid(row: label_row, column: 0, columnspan: 3, pady: [4, 0], sticky: 'w')
+
+    3.times do |col|
+      build_month(grid_f, year, q * 3 + col + 1, holidays, names)
+        .grid(row: month_row, column: col, padx: 3, pady: 3, sticky: 'nsew')
+    end
   end
 
   $notable_parent = grid_f
   $notable_frame = build_notable(grid_f, year)
-  $notable_frame.grid(row: 4, column: 0, columnspan: 3, padx: 3, pady: [4, 0], sticky: 'ew')
+  $notable_frame.grid(row: 8, column: 0, columnspan: 3, padx: 3, pady: [4, 0], sticky: 'ew')
 
   build_buttons(grid_f)
   3.times { |c| grid_f.grid_columnconfigure(c, weight: 1) }

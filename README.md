@@ -57,6 +57,10 @@ norcal --light 2026 # light mode, specific year
 - Auto-fit to screen height on startup, with `fit` button
 - Scrollbar for zoomed-in views
 
+## References
+
+- Djupvik, Guro: [røde dager](https://lille.snl.no/r%C3%B8de_dager) i Lille norske leksikon på snl.no. Hentet 7. april 2026.
+
 ## License
 
 [ISC](LICENSE)
