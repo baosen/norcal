@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'norcal'
-  s.version     = '1.4.0'
+  s.version     = '1.5.0'
   s.summary     = 'Norwegian calendar'
   s.description = 'A local Norwegian calendar with Tk GUI'
   s.authors     = ['baosen']
