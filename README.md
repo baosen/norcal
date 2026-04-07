@@ -1,6 +1,6 @@
 # norcal
 
-A local Norwegian desktop calendar.
+A local Norwegian calendar.
 
 ![norcal screenshot](screenshot.png)
 

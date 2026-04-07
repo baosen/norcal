@@ -1,8 +1,8 @@
 Gem::Specification.new do |s|
   s.name        = 'norcal'
   s.version     = '1.4.0'
-  s.summary     = 'Norwegian desktop calendar'
-  s.description = 'A local Norwegian desktop calendar with Tk GUI'
+  s.summary     = 'Norwegian calendar'
+  s.description = 'A local Norwegian calendar with Tk GUI'
   s.authors     = ['baosen']
   s.email       = 'chibaosen@gmail.com'
   s.homepage    = 'https://github.com/baosen/norcal'

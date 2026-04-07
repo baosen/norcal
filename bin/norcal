@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-# norcal - Norwegian desktop calendar
+# norcal - Norwegian calendar
 
 require 'date'
 require 'tk'
