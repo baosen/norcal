@@ -63,4 +63,4 @@ norcal --light 2026 # light mode, specific year
 
 ## License
 
-[ISC](LICENSE)
+[Unlicense](LICENSE)

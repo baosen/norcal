@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
   s.authors     = ['baosen']
   s.email       = 'chibaosen@gmail.com'
   s.homepage    = 'https://github.com/baosen/norcal'
-  s.license     = 'ISC'
+  s.license     = 'Unlicense'
 
   s.required_ruby_version = '>= 3.0'
   s.files       = ['bin/norcal', 'LICENSE', 'README.md']
