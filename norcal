@@ -429,7 +429,8 @@ def build_buttons(parent)
     command {
       $red_only = !$red_only
       rebuild_notable
-      restyle  # update button text
+      Tk.update_idletasks  # flush new geometry so $fit reads accurate height
+      $fit.call(false)
     }
   }
   $w[:buttons] << { w: b5, fg: :dkgray, text_key: nil,
