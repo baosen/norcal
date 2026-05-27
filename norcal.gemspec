@@ -9,8 +9,8 @@ Gem::Specification.new do |s|
   s.license     = 'Unlicense'
 
   s.required_ruby_version = '>= 3.0'
-  s.files       = ['bin/norcal', 'LICENSE', 'README.md']
-  s.bindir      = 'bin'
+  s.files       = ['norcal', 'LICENSE', 'README.md']
+  s.bindir      = '.'
   s.executables = ['norcal']
 
   s.add_dependency 'tk', '~> 0.6'
